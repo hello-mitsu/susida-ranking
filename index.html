@@ -282,6 +282,18 @@
 
     <h1>寿司打 コミュニティランキング</h1>
 
+    <div class="card" style="margin-bottom:20px">
+      <h2>管理者メニュー</h2>
+      <p style="font-size:14px;color:#666">管理者としてログインすると、ランキングの各結果を削除できます。</p>
+      <div id="admin-login-form">
+        <div class="form-group"><label for="admin-email">管理者メールアドレス</label><input type="email" id="admin-email" autocomplete="username" placeholder="管理者のメールアドレス"></div>
+        <div class="form-group"><label for="admin-password">パスワード</label><input type="password" id="admin-password" autocomplete="current-password" placeholder="管理者パスワード"></div>
+        <button class="submit-btn" id="admin-login" type="button">管理者ログイン</button>
+      </div>
+      <div id="admin-logged-in" style="display:none"><p>管理者としてログイン中です。</p><button class="tab-btn" id="admin-logout" type="button">ログアウト</button></div>
+      <p id="admin-message" role="status" style="font-size:14px"></p>
+    </div>
+
 
 
     <div class="tabs" id="mode-tabs">
@@ -376,7 +388,7 @@
 
                         <th>正しく打ったキー</th>
 
-                        <th>証拠</th>
+                        <th>証拠</th>\n                        <th id="admin-action-heading" style="display:none">管理</th>
 
                     </tr>
 
@@ -411,7 +423,7 @@
 // Supabaseプロジェクト作成後、下の2つを自分の値に置き換えてください。
 const SUPABASE_URL = 'https://tcdovujzwvynlvhmxcrw.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_g8PTyNa5gPx6fOM2miALYQ_Y1roKcoI';
-const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);\nlet isAdmin = false;
 
 let currentMode = 'normal';
 let currentCourse = '3000';
@@ -441,21 +453,48 @@ document.querySelectorAll('#course-tabs .tab-btn').forEach(btn => btn.addEventLi
   btn.classList.add('active'); currentCourse = btn.dataset.course; updateView();
 }));
 
+async function refreshAdminState() {
+  const { data } = await db.auth.getSession();
+  isAdmin = !!data.session;
+  $('admin-login-form').style.display = isAdmin ? 'none' : 'block';
+  $('admin-logged-in').style.display = isAdmin ? 'block' : 'none';
+  $('admin-action-heading').style.display = isAdmin ? '' : 'none';
+  updateView();
+}
+$('admin-login').addEventListener('click', async () => {
+  const email = $('admin-email').value.trim(), password = $('admin-password').value;
+  const msg = $('admin-message'); msg.textContent = 'ログイン中...';
+  const { error } = await db.auth.signInWithPassword({ email, password });
+  if (error) { msg.textContent = 'ログインできません。管理者アカウントとパスワードを確認してください。'; return; }
+  msg.textContent = 'ログインしました。'; await refreshAdminState();
+});
+$('admin-logout').addEventListener('click', async () => {
+  await db.auth.signOut(); isAdmin = false;
+  $('admin-message').textContent = 'ログアウトしました。'; await refreshAdminState();
+});
+async function deleteScore(player) {
+  if (!isAdmin) { alert('管理者ログインが必要です。'); return; }
+  if (!confirm(`「${player.name}」のスコア（${modeLabels[player.mode]}・${player.course}円コース）を削除しますか？この操作は取り消せません。`)) return;
+  const { error } = await db.rpc('admin_delete_score', { p_id: player.id });
+  if (error) { console.error(error); alert('削除できませんでした。SQLの管理者UUID設定を確認してください。'); return; }
+  alert('スコアを削除しました。'); await updateView();
+}
+
 async function updateView() {
   $('current-view-title').textContent = `${modeLabels[currentMode]} - ${currentCourse}円コース`;
   const tbody = $('ranking-tbody');
-  tbody.innerHTML = '<tr><td colspan="5" style="text-align:center">読み込み中...</td></tr>';
+  tbody.innerHTML = `<tr><td colspan="${isAdmin ? 6 : 5}" style="text-align:center">読み込み中...</td></tr>`;
   const { data, error } = await db.from('rankings').select('*')
     .eq('mode', currentMode).eq('course', Number(currentCourse))
     .order('amount', { ascending: false }).order('keys', { ascending: false });
   if (error) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#e63946">ランキングを読み込めません。Supabaseの設定を確認してください。</td></tr>';
+    tbody.innerHTML = `<tr><td colspan="${isAdmin ? 6 : 5}" style="text-align:center;color:#e63946">ランキングを読み込めません。Supabaseの設定を確認してください。</td></tr>`;
     console.error(error); return;
   }
   currentRankings = data || [];
   tbody.replaceChildren();
   if (!currentRankings.length) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#999">データがありません。</td></tr>'; return;
+    tbody.innerHTML = `<tr><td colspan="${isAdmin ? 6 : 5}" style="text-align:center;color:#999">データがありません。</td></tr>`; return;
   }
   currentRankings.forEach((player, index) => {
     const tr = document.createElement('tr');
@@ -466,7 +505,16 @@ async function updateView() {
     const evidence = document.createElement('td');
     if (player.image_url) { const link = document.createElement('span'); link.className = 'evidence-link'; link.textContent = '📄 見る'; link.addEventListener('click', () => openModal(player.image_url)); evidence.appendChild(link); }
     else evidence.textContent = 'なし';
-    tr.appendChild(evidence); tbody.appendChild(tr);
+    tr.appendChild(evidence);
+    if (isAdmin) {
+      const action = document.createElement('td');
+      const del = document.createElement('button');
+      del.type = 'button'; del.textContent = '削除'; del.className = 'tab-btn';
+      del.style.cssText = 'border-color:#e63946;color:#e63946;padding:6px 10px';
+      del.addEventListener('click', () => deleteScore(player));
+      action.appendChild(del); tr.appendChild(action);
+    }
+    tbody.appendChild(tr);
   });
 }
 
