@@ -388,7 +388,8 @@
 
                         <th>正しく打ったキー</th>
 
-                        <th>証拠</th>\n                        <th id="admin-action-heading" style="display:none">管理</th>
+                        <th>証拠</th>
+                        <th id="admin-action-heading" style="display:none">管理</th>
 
                     </tr>
 
@@ -423,7 +424,8 @@
 // Supabaseプロジェクト作成後、下の2つを自分の値に置き換えてください。
 const SUPABASE_URL = 'https://tcdovujzwvynlvhmxcrw.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_g8PTyNa5gPx6fOM2miALYQ_Y1roKcoI';
-const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);\nlet isAdmin = false;
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let isAdmin = false;
 
 let currentMode = 'normal';
 let currentCourse = '3000';
