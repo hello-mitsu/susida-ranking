@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>寿司打コミュニティランキング</title>
+
+    <style>
+
+        :root {
+
+            --primary-color: #e63946;
+
+            --bg-color: #f8f9fa;
+
+            --card-bg: #ffffff;
+
+            --text-color: #333333;
+
+        }
+
+        body {
+
+            font-family: Arial, sans-serif;
+
+            background-color: var(--bg-color);
+
+            color: var(--text-color);
+
+            margin: 0;
+
+            padding: 20px;
+
+        }
+
+        .container {
+
+            max-width: 950px;
+
+            margin: 0 auto;
+
+        }
+
+        h1 {
+
+            text-align: center;
+
+            color: var(--primary-color);
+
+            margin-bottom: 30px;
+
+        }
+
+        .tabs {
+
+            display: flex;
+
+            justify-content: center;
+
+            gap: 10px;
+
+            margin-bottom: 20px;
+
+        }
+
+        .tab-btn {
+
+            padding: 10px 20px;
+
+            border: 2px solid #ccc;
+
+            background: #fff;
+
+            cursor: pointer;
+
+            border-radius: 25px;
+
+            font-weight: bold;
+
+        }
+
+        .tab-btn.active {
+
+            background: var(--primary-color);
+
+            color: white;
+
+            border-color: var(--primary-color);
+
+        }
+
+        .main-layout {
+
+            display: grid;
+
+            grid-template-columns: 1fr;
+
+            gap: 20px;
+
+        }
+
+        @media(min-width: 768px) {
+
+            .main-layout { grid-template-columns: 1fr 2fr; }
+
+        }
+
+        .card {
+
+            background: var(--card-bg);
+
+            padding: 20px;
+
+            border-radius: 10px;
+
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+
+        }
+
+        .form-group {
+
+            margin-bottom: 15px;
+
+        }
+
+        label {
+
+            display: block;
+
+            margin-bottom: 5px;
+
+            font-weight: bold;
+
+        }
+
+        input {
+
+            width: 100%;
+
+            padding: 10px;
+
+            box-sizing: border-box;
+
+            border: 1px solid #ccc;
+
+            border-radius: 5px;
+
+        }
+
+        .submit-btn {
+
+            width: 100%;
+
+            padding: 12px;
+
+            background: #2a9d8f;
+
+            color: white;
+
+            border: none;
+
+            border-radius: 5px;
+
+            font-size: 16px;
+
+            cursor: pointer;
+
+            font-weight: bold;
+
+        }
+
+        table {
+
+            width: 100%;
+
+            border-collapse: collapse;
+
+            margin-top: 15px;
+
+        }
+
+        th, td {
+
+            padding: 12px;
+
+            text-align: left;
+
+            border-bottom: 1px solid #ddd;
+
+        }
+
+        th { background-color: #f1f1f1; }
+
+        .score-plus { color: #2a9d8f; font-weight: bold; }
+
+        .score-minus { color: #e63946; font-weight: bold; }
+
+        /* 証拠画像リンク・プレビューのスタイル */
+
+        .evidence-link {
+
+            color: #2a9d8f;
+
+            text-decoration: underline;
+
+            cursor: pointer;
+
+            font-size: 13px;
+
+        }
+
+        .preview-img {
+
+            max-width: 100%;
+
+            margin-top: 10px;
+
+            border: 1px solid #ddd;
+
+            border-radius: 5px;
+
+            display: none;
+
+        }
+
+        /* モーダルウィンドウ（拡大画像表示用） */
+
+        .modal {
+
+            display: none;
+
+            position: fixed;
+
+            z-index: 1000;
+
+            top: 0; left: 0; width: 100%; height: 100%;
+
+            background-color: rgba(0,0,0,0.8);
+
+            justify-content: center;
+
+            align-items: center;
+
+        }
+
+        .modal-content {
+
+            max-width: 900px;
+
+            max-height: 80%;
+
+            border-radius: 5px;
+
+        }
+
+        .modal-close {
+
+            position: absolute;
+
+            top: 20px; right: 30px;
+
+            color: #fff; font-size: 40px; font-weight: bold;
+
+            cursor: pointer;
+
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+
+
+<div class="container">
+
+    <h1>寿司打 コミュニティランキング</h1>
+
+
+
+    <div class="tabs" id="mode-tabs">
+
+        <button class="tab-btn active" data-mode="normal">普通</button>
+
+        <button class="tab-btn" data-mode="practice">練習</button>
+
+        <button class="tab-btn" data-mode="sudden">一発勝負</button>
+
+    </div>
+
+
+
+    <div class="tabs" id="course-tabs">
+
+        <button class="tab-btn active" data-course="3000">3000円コース</button>
+
+        <button class="tab-btn" data-course="5000">5000円コース</button>
+
+        <button class="tab-btn" data-course="10000">10000円コース</button>
+
+    </div>
+
+
+
+    <div class="main-layout">
+
+        <!-- スコア登録フォーム -->
+
+        <div class="card">
+
+            <h2>スコアを登録</h2>
+
+            <div class="form-group">
+
+                <label>お名前</label>
+
+                <input type="text" id="player-name" placeholder="名前を入力してください">
+
+            </div>
+
+            <div class="form-group">
+
+                <label>お得になった金額 / 損した金額 (円)</label>
+
+                <input type="number" id="score-amount" placeholder="例: 1240、損した場合は -340">
+
+            </div>
+
+            <div class="form-group">
+
+                <label>正しく打ったキーの数 (回)</label>
+
+                <input type="number" id="score-keys" placeholder="例: 350">
+
+            </div>
+
+            <div class="form-group">
+
+                <label>結果のスクリーンショット（証拠画像）</label>
+
+                <input type="file" id="score-image" accept="image/*">
+
+                <img id="form-preview" class="preview-img" alt="アップロード予告">
+
+            </div>
+
+            <button class="submit-btn" id="submit-score">ランキングに登録する</button>
+
+        </div>
+
+
+
+        <!-- ランキング表示エリア -->
+
+        <div class="card">
+
+            <h2>現在のランキング (<span id="current-view-title">普通 - 3000円コース</span>)</h2>
+
+            <table>
+
+                <thead>
+
+                    <tr>
+
+                        <th>順位</th>
+
+                        <th>名前</th>
+
+                        <th>結果金額</th>
+
+                        <th>正しく打ったキー</th>
+
+                        <th>証拠</th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody id="ranking-tbody"></tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<!-- 画像拡大用の空気ポップアップ（モーダル） -->
+
+<div id="image-modal" class="modal">
+
+    <span class="modal-close" id="modal-close">×</span>
+
+    <img class="modal-content" id="modal-target-img">
+
+</div>
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// Supabaseプロジェクト作成後、下の2つを自分の値に置き換えてください。
+const SUPABASE_URL = 'https://tcdovujzwvynlvhmxcrw.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_g8PTyNa5gPx6fOM2miALYQ_Y1roKcoI';
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let currentMode = 'normal';
+let currentCourse = '3000';
+let currentImageFile = null;
+let currentRankings = [];
+
+const modeLabels = { normal: '普通', practice: '練習', sudden: '一発勝負' };
+const courseLabels = { '3000': '3000円コース', '5000': '5000円コース', '10000': '10000円コース' };
+const $ = id => document.getElementById(id);
+
+$('score-image').addEventListener('change', event => {
+  currentImageFile = event.target.files?.[0] || null;
+  const preview = $('form-preview');
+  if (!currentImageFile) { preview.style.display = 'none'; preview.removeAttribute('src'); return; }
+  if (!currentImageFile.type.startsWith('image/')) { alert('画像ファイルを選択してください。'); currentImageFile = null; event.target.value = ''; return; }
+  if (currentImageFile.size > 5 * 1024 * 1024) { alert('画像は5MB以下にしてください。'); currentImageFile = null; event.target.value = ''; return; }
+  preview.src = URL.createObjectURL(currentImageFile);
+  preview.style.display = 'block';
+});
+
+document.querySelectorAll('#mode-tabs .tab-btn').forEach(btn => btn.addEventListener('click', () => {
+  document.querySelectorAll('#mode-tabs .tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active'); currentMode = btn.dataset.mode; updateView();
+}));
+document.querySelectorAll('#course-tabs .tab-btn').forEach(btn => btn.addEventListener('click', () => {
+  document.querySelectorAll('#course-tabs .tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active'); currentCourse = btn.dataset.course; updateView();
+}));
+
+async function updateView() {
+  $('current-view-title').textContent = `${modeLabels[currentMode]} - ${currentCourse}円コース`;
+  const tbody = $('ranking-tbody');
+  tbody.innerHTML = '<tr><td colspan="5" style="text-align:center">読み込み中...</td></tr>';
+  const { data, error } = await db.from('rankings').select('*')
+    .eq('mode', currentMode).eq('course', Number(currentCourse))
+    .order('amount', { ascending: false }).order('keys', { ascending: false });
+  if (error) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#e63946">ランキングを読み込めません。Supabaseの設定を確認してください。</td></tr>';
+    console.error(error); return;
+  }
+  currentRankings = data || [];
+  tbody.replaceChildren();
+  if (!currentRankings.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#999">データがありません。</td></tr>'; return;
+  }
+  currentRankings.forEach((player, index) => {
+    const tr = document.createElement('tr');
+    const rank = document.createElement('td'); rank.textContent = index + 1; tr.appendChild(rank);
+    const name = document.createElement('td'); const strong = document.createElement('strong'); strong.textContent = player.name; name.appendChild(strong); tr.appendChild(name);
+    const amount = document.createElement('td'); amount.textContent = `¥${Math.abs(player.amount)} ${player.amount >= 0 ? 'お得' : '損'}`; amount.className = player.amount >= 0 ? 'score-plus' : 'score-minus'; tr.appendChild(amount);
+    const keys = document.createElement('td'); keys.textContent = `${player.keys} 回`; tr.appendChild(keys);
+    const evidence = document.createElement('td');
+    if (player.image_url) { const link = document.createElement('span'); link.className = 'evidence-link'; link.textContent = '📄 見る'; link.addEventListener('click', () => openModal(player.image_url)); evidence.appendChild(link); }
+    else evidence.textContent = 'なし';
+    tr.appendChild(evidence); tbody.appendChild(tr);
+  });
+}
+
+$('submit-score').addEventListener('click', async () => {
+  const button = $('submit-score');
+  const name = $('player-name').value.trim();
+  const amount = Number($('score-amount').value);
+  const keys = Number($('score-keys').value);
+  if (!name || name.length > 30 || $('score-amount').value === '' || !Number.isInteger(amount) || $('score-keys').value === '' || !Number.isInteger(keys) || keys < 0) {
+    alert('名前（30文字以内）、金額、正しく打ったキー数を正しく入力してください。'); return;
+  }
+  button.disabled = true; button.textContent = '登録中...';
+  try {
+    let imageUrl = null;
+    if (currentImageFile) {
+      const ext = (currentImageFile.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+      const path = `${crypto.randomUUID()}.${ext}`;
+      const { error: uploadError } = await db.storage.from('score-evidence').upload(path, currentImageFile, { contentType: currentImageFile.type, upsert: false });
+      if (uploadError) throw uploadError;
+      imageUrl = db.storage.from('score-evidence').getPublicUrl(path).data.publicUrl;
+    }
+    const { data, error } = await db.rpc('submit_score', {
+      p_name: name, p_amount: amount, p_keys: keys,
+      p_mode: currentMode, p_course: Number(currentCourse), p_image_url: imageUrl
+    });
+    if (error) throw error;
+    if (data === 'not_better') { alert('同じ名前のベストスコアを下回っているため更新されませんでした。'); }
+    else { alert('ランキングに登録されました！'); $('score-amount').value = ''; $('score-keys').value = ''; $('score-image').value = ''; $('form-preview').style.display = 'none'; $('form-preview').removeAttribute('src'); currentImageFile = null; }
+    await updateView();
+  } catch (err) {
+    console.error(err); alert('登録に失敗しました。SupabaseのURL・キー、SQL、画像ストレージの設定を確認してください。');
+  } finally { button.disabled = false; button.textContent = 'ランキングに登録する'; }
+});
+
+function openModal(url) { $('modal-target-img').src = url; $('image-modal').style.display = 'flex'; }
+$('modal-close').addEventListener('click', () => $('image-modal').style.display = 'none');
+$('image-modal').addEventListener('click', e => { if (e.target.id === 'image-modal') $('image-modal').style.display = 'none'; });
+updateView();
+// 他の人の登録も反映されるよう15秒ごとにランキングを再取得
+setInterval(updateView, 15000);
+</script>
+
+
+
+</body>
+
+</html>
